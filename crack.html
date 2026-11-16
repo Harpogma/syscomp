@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>password_cracker.sh — démo pédagogique</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0d1117;
+      --bg2:       #161b22;
+      --bg3:       #21262d;
+      --border:    #30363d;
+      --green:     #39d353;
+      --green-dim: #238636;
+      --cyan:      #58a6ff;
+      --yellow:    #e3b341;
+      --red:       #f85149;
+      --orange:    #d29922;
+      --purple:    #bc8cff;
+      --comment:   #8b949e;
+      --text:      #c9d1d9;
+      --white:     #f0f6fc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    body::before {
+      content: '';
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px, transparent 2px,
+        rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px
+      );
+      z-index: 999;
+    }
+
+    .container { width: 100%; max-width: 760px; padding-top: 20px; }
+
+    .ascii-header {
+      color: var(--green);
+      font-size: 0.6rem;
+      line-height: 1.1;
+      white-space: pre;
+      text-align: center;
+      margin-bottom: 24px;
+      text-shadow: 0 0 8px rgba(57,211,83,0.4);
+    }
+    @media (max-width: 600px) { .ascii-header { font-size: 0.38rem; } }
+
+    .terminal {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .terminal-bar {
+      background: var(--bg3);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red    { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green  { background: #27c93f; }
+    .terminal-title {
+      margin-left: auto; margin-right: auto;
+      color: var(--comment); font-size: 0.75rem;
+      transform: translateX(-20px);
+    }
+    .terminal-body { padding: 20px 24px; }
+
+    .line {
+      display: flex; align-items: flex-start;
+      gap: 8px; margin-bottom: 10px;
+      font-size: 0.85rem; line-height: 1.6;
+    }
+    .prompt { color: var(--green); white-space: nowrap; }
+    .prompt-path { color: var(--cyan); }
+    .prompt-dollar { color: var(--purple); }
+    .cmd { color: var(--white); }
+    .cmd .kw   { color: var(--purple); }
+    .cmd .str  { color: var(--yellow); }
+    .cmd .flag { color: var(--cyan); }
+
+    .output-block {
+      margin: 4px 0 16px 0;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.3);
+      border-left: 2px solid var(--border);
+      border-radius: 0 4px 4px 0;
+      font-size: 0.82rem;
+    }
+
+    .input-zone { margin: 20px 0 10px; }
+    .input-label { color: var(--comment); font-size: 0.75rem; margin-bottom: 8px; display: block; }
+    .input-row {
+      display: flex; align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 4px; overflow: hidden;
+      background: #0d1117; transition: border-color 0.2s;
+    }
+    .input-row:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px rgba(88,166,255,0.15);
+    }
+    .input-prompt-prefix {
+      padding: 10px 12px; color: var(--green); font-size: 0.85rem;
+      background: rgba(255,255,255,0.03);
+      border-right: 1px solid var(--border);
+      white-space: nowrap; user-select: none;
+    }
+    #pwdInput {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--white); font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem; padding: 10px 14px; caret-color: var(--green);
+    }
+    #pwdInput::placeholder { color: var(--comment); opacity: 0.6; }
+    .toggle-btn {
+      padding: 10px 14px; background: none; border: none;
+      border-left: 1px solid var(--border);
+      color: var(--comment); cursor: pointer;
+      font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
+      transition: color 0.2s;
+    }
+    .toggle-btn:hover { color: var(--cyan); }
+
+    #results { margin-top: 20px; display: none; }
+    .result-section { margin-bottom: 20px; }
+    .section-title {
+      color: var(--comment); font-size: 0.72rem;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .found-banner {
+      padding: 12px 16px; border-radius: 4px;
+      font-size: 0.85rem; display: flex; align-items: center; gap: 10px;
+    }
+    .found-banner.danger {
+      background: rgba(248,81,73,0.1);
+      border: 1px solid rgba(248,81,73,0.3);
+      color: var(--red);
+    }
+    .found-banner.safe {
+      background: rgba(57,211,83,0.08);
+      border: 1px solid rgba(57,211,83,0.2);
+      color: var(--green);
+    }
+    .found-banner .icon { font-size: 1.1rem; }
+
+    .strength-row { display: flex; align-items: center; gap: 14px; }
+    .strength-bars { display: flex; gap: 4px; flex: 1; }
+    .strength-bar-seg {
+      height: 8px; flex: 1; border-radius: 2px;
+      background: var(--bg3); transition: background 0.4s;
+    }
+    .strength-label { font-size: 0.8rem; font-weight: 700; min-width: 90px; text-align: right; }
+
+    .crack-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .crack-table th {
+      text-align: left; color: var(--comment); font-weight: 400;
+      padding: 6px 10px; border-bottom: 1px solid var(--border);
+    }
+    .crack-table td { padding: 7px 10px; border-bottom: 1px solid rgba(48,54,61,0.5); }
+    .crack-table tr:last-child td { border-bottom: none; }
+    .crack-table .time-fast   { color: var(--red); }
+    .crack-table .time-medium { color: var(--yellow); }
+    .crack-table .time-slow   { color: var(--green); }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 540px) { .info-grid { grid-template-columns: 1fr; } }
+    .info-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 14px;
+    }
+    .info-card-title { color: var(--cyan); font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; }
+    .info-card p { font-size: 0.78rem; color: var(--comment); line-height: 1.6; }
+    .info-card code {
+      color: var(--yellow); background: rgba(0,0,0,0.3);
+      padding: 1px 5px; border-radius: 3px; font-size: 0.76rem;
+    }
+
+    .jtr-demo {
+      background: #0d1117; border: 1px solid var(--border);
+      border-radius: 6px; padding: 14px 16px; font-size: 0.78rem;
+    }
+    .jtr-comment { color: var(--comment); }
+    .jtr-cmd     { color: var(--green); }
+    .jtr-arg     { color: var(--yellow); }
+    .jtr-flag    { color: var(--cyan); }
+    .jtr-output  { color: var(--text); margin-top: 8px; }
+    .jtr-found   { color: var(--red); font-weight: bold; }
+
+    .footer {
+      margin-top: 28px; text-align: center;
+      color: var(--comment); font-size: 0.7rem; padding-bottom: 20px;
+    }
+    .footer a { color: var(--cyan); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    .cursor {
+      display: inline-block; width: 8px; height: 1em;
+      background: var(--green); vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <pre class="ascii-header">
+ ██████╗ ██████╗  █████╗  ██████╗██╗  ██╗███████╗██████╗
+██╔════╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗
+██║     ██████╔╝███████║██║     █████╔╝ █████╗  ██████╔╝
+██║     ██╔══██╗██╔══██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗
+╚██████╗██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██║  ██║
+ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+  </pre>
+
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span class="terminal-title">bash — password_cracker.sh</span>
+    </div>
+    <div class="terminal-body">
+
+      <div class="line">
+        <span class="prompt"><span class="prompt-path">~/demo</span> <span class="prompt-dollar">$</span></span>
+        <span class="cmd"><span class="kw">cat</span> <span class="str">intro.txt</span></span>
+      </div>
+      <div class="output-block" style="color:var(--comment)">
+        <span style="color:var(--cyan)">// Démo pédagogique — Systèmes Complexes</span><br>
+        Cette page simule ce que fait un attaquant avec :<br>
+        &nbsp;&nbsp;→ une liste de mots de passe volée (<code style="color:var(--yellow)">SecLists/rockyou.txt</code>)<br>
+        &nbsp;&nbsp;→ un outil de cracking (<code style="color:var(--yellow)">John the Ripper</code> / <code style="color:var(--yellow)">hashcat</code>)<br><br>
+        Testez votre propre mot de passe. <span style="color:var(--red)">Rien n'est envoyé</span> — tout tourne dans votre navigateur.
+      </div>
+
+      <div class="line">
+        <span class="prompt"><span class="prompt-path">~/demo</span> <span class="prompt-dollar">$</span></span>
+        <span class="cmd"><span class="kw">./crack.sh</span> <span class="flag">--interactive</span> <span class="flag">--wordlist</span> <span class="str">rockyou.txt</span></span>
+      </div>
+
+      <div id="loadingLine" class="line">
+        <span class="prompt"><span class="prompt-path">~/demo</span> <span class="prompt-dollar">$</span></span>
+        <span id="loadingText" style="color:var(--comment)">
+          <span style="color:var(--cyan)">fetch</span> <span style="color:var(--yellow)">SecLists/xato-net-1M.txt</span>
+          <span id="loadingDots" style="color:var(--green)">...</span>
+        </span>
+      </div>
+      <div id="loadedLine" class="line" style="display:none">
+        <span style="color:var(--comment);font-size:0.8rem;padding-left:2px">
+          └─ <span style="color:var(--green)">✓</span> <span id="loadedCount"></span> mots de passe chargés depuis SecLists
+        </span>
+      </div>
+
+      <div class="input-zone">
+        <span class="input-label"># entrez le mot de passe à analyser :</span>
+        <div class="input-row">
+          <span class="input-prompt-prefix">password:</span>
+          <input type="password" id="pwdInput" placeholder="chargement en cours…" autocomplete="off" spellcheck="false" disabled>
+          <button class="toggle-btn" id="toggleBtn" onclick="toggleVisibility()">show</button>
+        </div>
+      </div>
+
+      <div id="results">
+        <div class="result-section">
+          <div class="section-title">// 01 — présence dans SecLists / rockyou.txt</div>
+          <div id="foundBanner" class="found-banner"></div>
+        </div>
+        <div class="result-section">
+          <div class="section-title">// 02 — score de robustesse</div>
+          <div class="strength-row">
+            <div class="strength-bars" id="strengthBars">
+              <div class="strength-bar-seg"></div>
+              <div class="strength-bar-seg"></div>
+              <div class="strength-bar-seg"></div>
+              <div class="strength-bar-seg"></div>
+              <div class="strength-bar-seg"></div>
+              <div class="strength-bar-seg"></div>
+              <div class="strength-bar-seg"></div>
+            </div>
+            <div class="strength-label" id="strengthLabel">—</div>
+          </div>
+        </div>
+        <div class="result-section">
+          <div class="section-title">// 03 — temps estimé de crack (attaque brute-force, RTX 4090)</div>
+          <table class="crack-table">
+            <thead>
+              <tr>
+                <th>algorithme de hachage</th>
+                <th>vitesse (H/s)</th>
+                <th>temps estimé</th>
+              </tr>
+            </thead>
+            <tbody id="crackTableBody"></tbody>
+          </table>
+          <div style="margin-top:8px;font-size:0.72rem;color:var(--comment)">
+            * Pire cas : attaque exhaustive sur l'espace des caractères. Une attaque par dictionnaire sur un mot courant = quasi instantané.
+          </div>
+        </div>
+        <div class="result-section">
+          <div class="section-title">// 04 — ce que ferait John the Ripper sur ce hash</div>
+          <div class="jtr-demo" id="jtrDemo"></div>
+        </div>
+      </div>
+
+      <div id="waitCursor" class="line" style="margin-top:4px">
+        <span class="prompt"><span class="prompt-path">~/demo</span> <span class="prompt-dollar">$</span></span>
+        <span class="cursor"></span>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="margin-top:28px">
+    <div class="section-title" style="font-size:0.72rem;color:var(--comment);text-transform:uppercase;letter-spacing:0.08em;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:16px">
+      // contexte — pourquoi c'est si facile
+    </div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-card-title">▸ SecLists / rockyou.txt</div>
+        <p>En 2009, RockYou.com se fait pirater : <strong style="color:var(--white)">32 millions</strong> de mots de passe stockés en clair sont publiés. Ce fichier est devenu la référence des pentesteurs. <code>rockyou.txt</code> contient ~14M d'entrées, <code>SecLists</code> en regroupe des centaines de millions.</p>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">▸ John the Ripper</div>
+        <p>Outil open-source de cracking de hash. Modes : <code>--wordlist</code> (dictionnaire), <code>--rules</code> (variations), <code>--incremental</code> (brute-force). Hashcat (GPU) est encore plus rapide : <code>~100 Ghash/s</code> sur NTLM avec une RTX 4090.</p>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">▸ Credential Stuffing</div>
+        <p>Des milliards d'identifiants volés circulent (Have I Been Pwned : +15 milliards). Les attaquants les testent automatiquement sur d'autres services — c'est pourquoi la réutilisation de mot de passe est fatale.</p>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">▸ Lien avec Stuxnet</div>
+        <p>Stuxnet exploitait des <strong style="color:var(--white)">mots de passe par défaut</strong> de Siemens Step 7 (<code>2501</code>, <code>admin</code>…) pour se propager dans les SCADA des centrifugeuses. Des infrastructures critiques, brisées par des credentials faibles.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    démo pédagogique — aucun mot de passe n'est transmis au réseau &nbsp;·&nbsp;
+    <a href="https://github.com/danielmiessler/SecLists" target="_blank">SecLists</a> &nbsp;·&nbsp;
+    <a href="https://www.openwall.com/john/" target="_blank">John the Ripper</a>
+  </div>
+
+</div>
+
+<script src="passwords.js"></script>
+<script>
+  // Incrémente le compteur de scans à chaque visite
+  fetch("https://api.countapi.xyz/hit/harpogma-syscomp/scans").catch(() => {});
+</script>
+<script>
+  const input      = document.getElementById('pwdInput');
+  const results    = document.getElementById('results');
+  const waitCursor = document.getElementById('waitCursor');
+  let debounceTimer;
+
+  let dotCount = 0;
+  const dotInterval = setInterval(() => {
+    dotCount = (dotCount + 1) % 4;
+    const el = document.getElementById('loadingDots');
+    if (el) el.textContent = '.'.repeat(dotCount + 1);
+  }, 400);
+
+  loadPasswordList(
+    (msg) => { document.getElementById('loadingText').innerHTML = `<span style="color:var(--red)">${msg}</span>`; },
+    (count) => {
+      clearInterval(dotInterval);
+      document.getElementById('loadingLine').style.display = 'none';
+      document.getElementById('loadedLine').style.display  = 'flex';
+      document.getElementById('loadedCount').textContent   = count.toLocaleString('fr-CH');
+      input.disabled    = false;
+      input.placeholder = 'votre_mot_de_passe';
+      input.focus();
+    }
+  );
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(analyze, 200);
+  });
+
+  function toggleVisibility() {
+    const btn = document.getElementById('toggleBtn');
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = 'hide'; }
+    else                           { input.type = 'password'; btn.textContent = 'show'; }
+  }
+
+  function analyze() {
+    const pwd = input.value;
+    if (!pwd) { results.style.display = 'none'; waitCursor.style.display = 'flex'; return; }
+    results.style.display = 'block';
+    waitCursor.style.display = 'none';
+
+    const rank   = PASSWORD_MAP.get(pwd) ?? PASSWORD_MAP.get(pwd.toLowerCase());
+    const banner = document.getElementById('foundBanner');
+    if (rank) {
+      banner.className = 'found-banner danger';
+      banner.innerHTML = `<span class="icon">⚡</span>
+        <span>Trouvé dans <strong>rockyou.txt</strong> — rang <strong>#${rank}</strong> parmi les plus courants.
+        John the Ripper le cracke en <strong style="color:var(--red)">quelques secondes</strong> avec <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px;font-size:0.76rem">--wordlist rockyou.txt</code>.</span>`;
+    } else {
+      banner.className = 'found-banner safe';
+      banner.innerHTML = `<span class="icon">✓</span>
+        <span>Non trouvé dans les <strong>${LIST_SIZE.toLocaleString('fr-CH')} mots de passe</strong> de SecLists chargés.
+        (rockyou.txt complet contient ~14 millions d'entrées — restez prudent.)</span>`;
+    }
+
+    const score = getStrengthScore(pwd);
+    const { label, color, bar } = getStrengthLabel(score);
+    document.querySelectorAll('.strength-bar-seg').forEach((b, i) => {
+      b.style.background = i < bar ? color : 'var(--bg3)';
+    });
+    document.getElementById('strengthLabel').textContent = label;
+    document.getElementById('strengthLabel').style.color = color;
+
+    const times = estimateCrackTime(pwd);
+    const tbody = document.getElementById('crackTableBody');
+    const speedFmt = (s) => {
+      if (s >= 1e12) return `${(s/1e12).toFixed(0)} TH/s`;
+      if (s >= 1e9)  return `${(s/1e9).toFixed(0)} GH/s`;
+      if (s >= 1e6)  return `${(s/1e6).toFixed(0)} MH/s`;
+      if (s >= 1e3)  return `${(s/1e3).toFixed(0)} kH/s`;
+      return `${s} H/s`;
+    };
+    tbody.innerHTML = '';
+    times.forEach(({ label, speed, seconds, human }) => {
+      const cls = seconds < 3600 ? 'time-fast' : seconds < 86400*365 ? 'time-medium' : 'time-slow';
+      tbody.innerHTML += `<tr>
+        <td style="color:var(--text)">${label}</td>
+        <td style="color:var(--comment)">${speedFmt(speed)}</td>
+        <td class="${cls}">${human}</td></tr>`;
+    });
+
+    const jtr     = document.getElementById('jtrDemo');
+    const escaped = pwd.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (rank) {
+      jtr.innerHTML = `
+<span class="jtr-comment"># hash MD5 du mot de passe (simulé)</span><br>
+<span class="jtr-cmd">$</span> <span class="jtr-cmd">echo</span> -n <span class="jtr-arg">"${escaped}"</span> | md5sum > hash.txt<br>
+<span class="jtr-cmd">$</span> <span class="jtr-cmd">john</span> <span class="jtr-flag">--format</span>=raw-md5 <span class="jtr-flag">--wordlist</span>=<span class="jtr-arg">rockyou.txt</span> hash.txt<br><br>
+<span class="jtr-output">Using default input encoding: UTF-8</span><br>
+<span class="jtr-output">Loaded 1 password hash (Raw-MD5 [MD5 128/128 AVX 4x3])</span><br>
+<span class="jtr-output">Press 'q' or Ctrl-C to abort, 'h' for help</span><br>
+<span class="jtr-found">${escaped}          (hash.txt)</span><br>
+<span class="jtr-output">1g 0:00:00:00 DONE (${new Date().toLocaleTimeString()}) 100g/s</span><br>
+<span class="jtr-output">Session completed.</span>`;
+    } else {
+      jtr.innerHTML = `
+<span class="jtr-comment"># ce mot de passe n'est pas dans rockyou.txt → mode brute-force</span><br>
+<span class="jtr-cmd">$</span> <span class="jtr-cmd">john</span> <span class="jtr-flag">--format</span>=raw-md5 <span class="jtr-flag">--incremental</span> hash.txt<br><br>
+<span class="jtr-output">Using default input encoding: UTF-8</span><br>
+<span class="jtr-output">Loaded 1 password hash</span><br>
+<span class="jtr-output">Press 'q' or Ctrl-C to abort...</span><br>
+<span style="color:var(--orange)">0g 0:00:04:12 ... (attaque en cours — peut prendre des heures/années)</span><br>
+<span class="jtr-comment"># → le temps estimé dépend de la complexité (voir tableau ci-dessus)</span>`;
+    }
+  }
+</script>
+</body>
+</html>
