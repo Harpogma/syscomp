@@ -1,6 +1,6 @@
 // Chargement de SecLists — 10-million-password-list-top-100000.txt
 // Source: https://github.com/danielmiessler/SecLists
-const SECLIST_URL = "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/10-million-password-list-top-100000.txt";
+const SECLIST_URL = "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/xato-net-10-million-passwords-100000.txt";
 
 let PASSWORD_MAP = new Map();   // password → rank (1-based)
 let LIST_SIZE    = 0;
