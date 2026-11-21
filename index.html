@@ -62,7 +62,7 @@
     }
 
     .tag {
-      font-size: 0.7rem;
+      font-size: 0.9rem;
       color: var(--purple);
       letter-spacing: 0.12em;
       text-transform: uppercase;
@@ -71,7 +71,7 @@
     .tag::before { content: '// '; }
 
     h1 {
-      font-size: 2rem;
+      font-size: 2.6rem;
       font-weight: 700;
       color: var(--white);
       line-height: 1.2;
@@ -83,7 +83,7 @@
     }
 
     .lead {
-      font-size: 0.82rem;
+      font-size: 1rem;
       color: var(--comment);
       line-height: 1.85;
       margin-bottom: 36px;
@@ -106,7 +106,7 @@
     .step:hover { border-color: var(--cyan); }
 
     .step-num {
-      font-size: 0.65rem;
+      font-size: 0.8rem;
       font-weight: 700;
       color: var(--purple);
       background: rgba(188,140,255,0.1);
@@ -116,14 +116,14 @@
       white-space: nowrap;
       margin-top: 2px;
     }
-    .step-body { font-size: 0.78rem; color: var(--comment); line-height: 1.6; }
+    .step-body { font-size: 0.95rem; color: var(--comment); line-height: 1.6; }
     .step-body strong { color: var(--text); }
     .step-body .highlight-red  { color: var(--red); font-weight: 700; }
     .step-body .highlight-green{ color: var(--green); font-weight: 700; }
 
     .footer-left {
       margin-top: 36px;
-      font-size: 0.68rem;
+      font-size: 0.82rem;
       color: var(--border);
     }
     .footer-left a { color: var(--comment); text-decoration: none; }
@@ -141,7 +141,7 @@
     }
 
     .right-label {
-      font-size: 0.72rem;
+      font-size: 0.9rem;
       color: var(--comment);
       text-align: center;
       letter-spacing: 0.06em;
@@ -182,7 +182,7 @@
     #qrcode canvas, #qrcode img { display: block; border-radius: 4px; }
 
     .url-display {
-      font-size: 0.72rem;
+      font-size: 0.88rem;
       color: var(--cyan);
       text-align: center;
       word-break: break-all;
@@ -307,15 +307,6 @@
     </div>
 
     <div class="url-display" id="urlDisplay"></div>
-
-    <div class="counter-block">
-      <div class="counter-title">participants connectés</div>
-      <div class="counter-num" id="counterNum">—</div>
-      <div class="counter-sub">
-        <span class="live-dot"></span>
-        <span>mise à jour en temps réel</span>
-      </div>
-    </div>
   </div>
 
 </div>
@@ -329,8 +320,8 @@
   document.getElementById('urlDisplay').textContent = CRACK_URL;
   new QRCode(document.getElementById("qrcode"), {
     text:         CRACK_URL,
-    width:        240,
-    height:       240,
+    width:        280,
+    height:       280,
     colorDark:    "#39d353",
     colorLight:   "#161b22",
     correctLevel: QRCode.CorrectLevel.M,
